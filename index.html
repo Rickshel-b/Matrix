@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Matrix — Liquid Glass</title>
+  <style>
+    :root {
+      --bg: #060a12;
+      --glass: rgba(255, 255, 255, 0.07);
+      --glass-strong: rgba(255, 255, 255, 0.11);
+      --border: rgba(255, 255, 255, 0.13);
+      --text: #f0f4ff;
+      --text-muted: #8ba3c7;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --radius: 18px;
+      --blur: 22px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(59, 130, 246, 0.25), transparent),
+        radial-gradient(ellipse 70% 50% at 80% 70%, rgba(168, 85, 247, 0.18), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(16, 185, 129, 0.08), transparent);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Themes */
+    body.theme-black {
+      --bg: #0a0a0c; --accent: #a1a1aa; --accent-hover: #d4d4d8; --text-muted: #a1a1aa;
+    }
+    body.theme-black::before {
+      background: radial-gradient(ellipse 80% 50% at 30% 20%, rgba(255,255,255,0.06), transparent),
+                  radial-gradient(ellipse 60% 40% at 70% 80%, rgba(255,255,255,0.03), transparent);
+    }
+    body.theme-purple {
+      --bg: #0c0814; --accent: #a855f7; --accent-hover: #c084fc; --text-muted: #b49fd4;
+    }
+    body.theme-purple::before {
+      background: radial-gradient(ellipse 80% 60% at 25% 25%, rgba(168,85,247,0.28), transparent),
+                  radial-gradient(ellipse 60% 50% at 75% 75%, rgba(236,72,153,0.12), transparent);
+    }
+    body.theme-green {
+      --bg: #060f0c; --accent: #10b981; --accent-hover: #34d399; --text-muted: #86c3a8;
+    }
+    body.theme-green::before {
+      background: radial-gradient(ellipse 80% 60% at 20% 30%, rgba(16,185,129,0.22), transparent),
+                  radial-gradient(ellipse 60% 40% at 80% 70%, rgba(52,211,153,0.10), transparent);
+    }
+    body.theme-rose {
+      --bg: #12080c; --accent: #f43f5e; --accent-hover: #fb7185; --text-muted: #d4a0ae;
+    }
+    body.theme-rose::before {
+      background: radial-gradient(ellipse 80% 60% at 25% 25%, rgba(244,63,94,0.22), transparent),
+                  radial-gradient(ellipse 60% 40% at 75% 70%, rgba(251,113,133,0.10), transparent);
+    }
+    body.theme-light-white {
+      --bg: #e8e8ed; --glass: rgba(255,255,255,0.55); --glass-strong: rgba(255,255,255,0.78);
+      --border: rgba(0,0,0,0.08); --text: #1c1c1e; --text-muted: #6c6c70;
+      --accent: #007aff; --accent-hover: #0a84ff;
+    }
+    body.theme-light-white::before {
+      background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(0,122,255,0.12), transparent),
+                  radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,0,0,0.03), transparent);
+    }
+    body.theme-light-blue {
+      --bg: #e6eefb; --glass: rgba(255,255,255,0.55); --glass-strong: rgba(255,255,255,0.78);
+      --border: rgba(37,99,235,0.12); --text: #0f172a; --text-muted: #64748b;
+      --accent: #2563eb; --accent-hover: #3b82f6;
+    }
+    body.theme-light-blue::before {
+      background: radial-gradient(ellipse 80% 50% at 25% 25%, rgba(37,99,235,0.15), transparent),
+                  radial-gradient(ellipse 60% 40% at 75% 75%, rgba(99,102,241,0.08), transparent);
+    }
+    body.theme-light-purple {
+      --bg: #efeaf7; --glass: rgba(255,255,255,0.55); --glass-strong: rgba(255,255,255,0.78);
+      --border: rgba(124,58,237,0.12); --text: #1e1033; --text-muted: #6b5b7a;
+      --accent: #7c3aed; --accent-hover: #8b5cf6;
+    }
+    body.theme-light-purple::before {
+      background: radial-gradient(ellipse 80% 50% at 25% 25%, rgba(124,58,237,0.14), transparent),
+                  radial-gradient(ellipse 60% 40% at 75% 75%, rgba(168,85,247,0.08), transparent);
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(28px + var(--safe-bottom)) calc(16px + var(--safe-left));
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    /* ===== Matrices ===== */
+    .matrices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .matrix-card {
+      padding: 16px;
+      min-width: 0; /* critical for grid overflow */
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .matrix-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px var(--accent);
+    }
+
+    .matrix-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .matrix-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .size-control {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .size-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--glass-strong);
+      color: var(--text);
+      font-size: 1.05rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.15s;
+      touch-action: manipulation;
+    }
+    .size-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
+    }
+
+    .size-value {
+      min-width: 16px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Matrix grid — scroll inside if needed */
+    .matrix-grid-wrapper {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      padding-bottom: 4px;
+    }
+
+    .matrix-grid {
+      display: grid;
+      gap: 6px;
+      width: max-content;
+    }
+
+    .cell {
+      width: 52px;
+      height: 44px;
+      min-width: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--glass-strong);
+      color: var(--text);
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 500;
+      outline: none;
+      transition: 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .cell:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .cell:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+      background: var(--glass);
+    }
+
+    /* ===== Operation bar ===== */
+    .op-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 100;
+      overflow: visible;
+    }
+    .op-bar > label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .dropdown {
+      position: relative;
+      min-width: 150px;
+      z-index: 100;
+    }
+    .dropdown-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--glass-strong);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.15s;
+      touch-action: manipulation;
+    }
+    .dropdown-toggle:hover,
+    .dropdown.open .dropdown-toggle {
+      border-color: var(--accent);
+    }
+    .dropdown-toggle::after {
+      content: "▾";
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: rgba(15, 22, 40, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 6px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      z-index: 200;
+      display: none;
+      overflow: hidden;
+    }
+    body[class*="light-"] .dropdown-menu {
+      background: rgba(255,255,255,0.92);
+    }
+    .dropdown.open .dropdown-menu { display: block; }
+
+    .dropdown-item {
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: var(--text);
+      transition: 0.12s;
+      touch-action: manipulation;
+    }
+    .dropdown-item:hover,
+    .dropdown-item.active {
+      background: color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+
+    .scalar-wrap {
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .scalar-wrap.visible { display: flex; }
+
+    .scalar-input {
+      width: 72px;
+      text-align: center;
+      background: var(--glass-strong);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 10px 10px;
+      font-size: 0.95rem;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .scalar-input:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 22px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.15s;
+      touch-action: manipulation;
+      min-height: 42px;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    /* ===== Result ===== */
+    .result-card {
+      padding: 18px;
+      min-height: 160px;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .result-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .result-content {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      user-select: text;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+    .result-content .steps {
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    /* Pretty matrix result */
+    .pretty-matrix {
+      display: inline-flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 8px;
+      margin-bottom: 6px;
+      max-width: 100%;
+    }
+    .matrix-bracket {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 12px;
+      min-height: 100%;
+      user-select: none;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .matrix-bracket.left {
+      border-left: 2.5px solid var(--text-muted);
+      border-radius: 6px 0 0 6px;
+      margin-right: 6px;
+    }
+    .matrix-bracket.left::before,
+    .matrix-bracket.left::after {
+      content: "";
+      display: block;
+      background: var(--text-muted);
+      position: absolute;
+      width: 9px;
+      height: 2.5px;
+      left: 0;
+    }
+    .matrix-bracket.left::before { top: 0; }
+    .matrix-bracket.left::after { bottom: 0; }
+    .matrix-bracket.right {
+      border-right: 2.5px solid var(--text-muted);
+      border-radius: 0 6px 6px 0;
+      margin-left: 6px;
+    }
+    .matrix-bracket.right::before,
+    .matrix-bracket.right::after {
+      content: "";
+      display: block;
+      background: var(--text-muted);
+      position: absolute;
+      width: 9px;
+      height: 2.5px;
+      right: 0;
+    }
+    .matrix-bracket.right::before { top: 0; }
+    .matrix-bracket.right::after { bottom: 0; }
+
+    .matrix-table {
+      display: grid;
+      gap: 5px;
+      padding: 3px 0;
+    }
+    .matrix-table .mcell {
+      min-width: 44px;
+      min-height: 40px;
+      padding: 7px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--glass-strong);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--text);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    /* Theme panel */
+    .theme-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+    .theme-panel > span {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-right: 2px;
+    }
+    .swatch {
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: 0.15s;
+      touch-action: manipulation;
+    }
+    .swatch:hover, .swatch.active {
+      border-color: var(--text);
+      transform: scale(1.12);
+    }
+    .swatch[data-theme="blue"] { background: #3b82f6; }
+    .swatch[data-theme="black"] { background: #52525b; }
+    .swatch[data-theme="purple"] { background: #a855f7; }
+    .swatch[data-theme="green"] { background: #10b981; }
+    .swatch[data-theme="rose"] { background: #f43f5e; }
+    .swatch[data-theme="light-white"] { background: #f4f4f5; border-color: #ccc; }
+    .swatch[data-theme="light-blue"] { background: linear-gradient(135deg, #93c5fd, #3b82f6); }
+    .swatch[data-theme="light-purple"] { background: linear-gradient(135deg, #d8b4fe, #a855f7); }
+
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-sub {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      opacity: 0.85;
+    }
+
+    .help-btn {
+      background: var(--glass-strong);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-muted);
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.15s;
+      touch-action: manipulation;
+    }
+    .help-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .help-panel {
+      display: none;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      line-height: 1.55;
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+    .help-panel.open { display: block; }
+    .help-panel h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .help-panel ul {
+      margin: 0 0 0 1.1em;
+      padding: 0;
+    }
+    .help-panel li { margin-bottom: 6px; }
+    .help-panel p {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    /* ========== RESPONSIVE ========== */
+
+    /* Tablets and below */
+    @media (max-width: 768px) {
+      .matrices {
+        grid-template-columns: 1fr;
+      }
+      .app {
+        padding: calc(16px + var(--safe-top)) calc(12px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(12px + var(--safe-left));
+      }
+      h1 { font-size: 1.35rem; }
+    }
+
+    /* Phones */
+    @media (max-width: 480px) {
+      .app {
+        padding: calc(12px + var(--safe-top)) calc(10px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(10px + var(--safe-left));
+      }
+      h1 { font-size: 1.25rem; }
+      header { margin-bottom: 16px; }
+
+      .matrix-card { padding: 12px; }
+      .matrix-title { font-size: 0.98rem; }
+
+      .size-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+      }
+
+      .cell {
+        width: 46px;
+        height: 42px;
+        font-size: 0.95rem;
+      }
+
+      .op-bar {
+        padding: 12px;
+        gap: 8px;
+      }
+      .dropdown { min-width: 130px; flex: 1 1 auto; }
+      .btn-primary {
+        width: 100%;
+        padding: 12px;
+        min-height: 46px;
+      }
+
+      .result-card { padding: 14px; }
+      .result-content .steps { font-size: 0.82rem; }
+
+      .matrix-table .mcell {
+        min-width: 40px;
+        min-height: 36px;
+        font-size: 0.92rem;
+        padding: 6px;
+      }
+
+      .theme-panel { padding: 12px; gap: 8px; }
+      .swatch { width: 28px; height: 28px; min-width: 28px; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .cell {
+        width: 40px;
+        height: 38px;
+        font-size: 0.9rem;
+      }
+      .size-control { font-size: 0.75rem; gap: 3px; }
+      .size-btn {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        font-size: 0.95rem;
+      }
+      .matrix-table .mcell {
+        min-width: 36px;
+        min-height: 34px;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Landscape phones */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .app {
+        padding-top: calc(8px + var(--safe-top));
+        padding-bottom: calc(12px + var(--safe-bottom));
+      }
+      header { margin-bottom: 10px; }
+      h1 { font-size: 1.15rem; }
+      .matrices {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .matrix-card { padding: 10px; }
+      .cell {
+        width: 40px;
+        height: 36px;
+      }
+      .result-card { min-height: 100px; padding: 12px; }
+      .theme-panel { margin-top: 10px; padding: 10px; }
+    }
+  </style>
+</head>
+<body class="theme-blue">
+  <div class="app" id="app">
+    <header>
+      <div class="brand">
+        <h1>Matrix</h1>
+        <div class="brand-sub">by Rickshel</div>
+      </div>
+      <button class="help-btn" id="helpBtn" type="button">Справка</button>
+    </header>
+
+    <div class="glass help-panel" id="helpPanel">
+      <h3>Что умеет Matrix</h3>
+      <ul>
+        <li><b>A + B</b> — сложение матриц одинакового размера</li>
+        <li><b>A − B</b> — вычитание матриц одинакового размера</li>
+        <li><b>A × B</b> — умножение матриц (столбцы A = строки B)</li>
+        <li><b>k × A</b> — умножение матрицы A на число</li>
+        <li><b>k × B</b> — умножение матрицы B на число</li>
+      </ul>
+      <p>
+        Максимальный размер матрицы — 5×5.<br>
+        Можно вводить целые числа и дроби (например <code>1/3</code>).<br>
+        После вычисления показывается пошаговое решение и результат в виде матрицы.
+      </p>
+    </div>
+
+    <div class="matrices">
+      <div class="glass matrix-card">
+        <div class="matrix-header">
+          <div class="matrix-title">Матрица A</div>
+          <div class="size-control">
+            <span>Строк</span>
+            <button class="size-btn" data-mat="A" data-dim="rows" data-dir="-1" aria-label="Меньше строк">−</button>
+            <span class="size-value" id="A-rows">2</span>
+            <button class="size-btn" data-mat="A" data-dim="rows" data-dir="1" aria-label="Больше строк">+</button>
+            <span style="width:6px"></span>
+            <span>Столбцов</span>
+            <button class="size-btn" data-mat="A" data-dim="cols" data-dir="-1" aria-label="Меньше столбцов">−</button>
+            <span class="size-value" id="A-cols">2</span>
+            <button class="size-btn" data-mat="A" data-dim="cols" data-dir="1" aria-label="Больше столбцов">+</button>
+          </div>
+        </div>
+        <div class="matrix-grid-wrapper">
+          <div class="matrix-grid" id="grid-A"></div>
+        </div>
+      </div>
+
+      <div class="glass matrix-card">
+        <div class="matrix-header">
+          <div class="matrix-title">Матрица B</div>
+          <div class="size-control">
+            <span>Строк</span>
+            <button class="size-btn" data-mat="B" data-dim="rows" data-dir="-1" aria-label="Меньше строк">−</button>
+            <span class="size-value" id="B-rows">2</span>
+            <button class="size-btn" data-mat="B" data-dim="rows" data-dir="1" aria-label="Больше строк">+</button>
+            <span style="width:6px"></span>
+            <span>Столбцов</span>
+            <button class="size-btn" data-mat="B" data-dim="cols" data-dir="-1" aria-label="Меньше столбцов">−</button>
+            <span class="size-value" id="B-cols">2</span>
+            <button class="size-btn" data-mat="B" data-dim="cols" data-dir="1" aria-label="Больше столбцов">+</button>
+          </div>
+        </div>
+        <div class="matrix-grid-wrapper">
+          <div class="matrix-grid" id="grid-B"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass op-bar">
+      <label>Операция</label>
+      <div class="dropdown" id="opDropdown">
+        <button class="dropdown-toggle" id="opToggle" type="button">A + B</button>
+        <div class="dropdown-menu" id="opMenu">
+          <div class="dropdown-item active" data-value="add">A + B</div>
+          <div class="dropdown-item" data-value="sub">A − B</div>
+          <div class="dropdown-item" data-value="mul">A × B</div>
+          <div class="dropdown-item" data-value="scalar">k × A</div>
+          <div class="dropdown-item" data-value="scalarB">k × B</div>
+        </div>
+      </div>
+      <div class="scalar-wrap" id="scalarWrap">
+        <label>k =</label>
+        <input type="text" class="scalar-input" id="scalar" value="2" inputmode="decimal" />
+      </div>
+      <button class="btn-primary" id="calcBtn" type="button">Вычислить</button>
+    </div>
+
+    <div class="glass result-card">
+      <div class="result-title">Решение</div>
+      <div class="result-content" id="result">
+        <div class="steps">Нажмите «Вычислить»</div>
+      </div>
+    </div>
+
+    <div class="glass theme-panel">
+      <span>Цвет</span>
+      <div class="swatch active" data-theme="blue" title="Синий"></div>
+      <div class="swatch" data-theme="black" title="Чёрный"></div>
+      <div class="swatch" data-theme="purple" title="Фиолетовый"></div>
+      <div class="swatch" data-theme="green" title="Зелёный"></div>
+      <div class="swatch" data-theme="rose" title="Розовый"></div>
+      <div class="swatch" data-theme="light-white" title="Светлый"></div>
+      <div class="swatch" data-theme="light-blue" title="Светло-синий"></div>
+      <div class="swatch" data-theme="light-purple" title="Светло-фиолетовый"></div>
+    </div>
+  </div>
+
+  <script>
+    const MAX = 5;
+    const state = {
+      A: { rows: 2, cols: 2, data: [] },
+      B: { rows: 2, cols: 2, data: [] }
+    };
+    let currentOp = "add";
+
+    function emptyData(r, c) {
+      return Array.from({ length: r }, function() { return Array(c).fill("0"); });
+    }
+    state.A.data = emptyData(2, 2);
+    state.B.data = emptyData(2, 2);
+
+    function renderMatrix(name) {
+      var m = state[name];
+      var grid = document.getElementById("grid-" + name);
+      grid.style.gridTemplateColumns = "repeat(" + m.cols + ", 1fr)";
+      grid.innerHTML = "";
+      for (var i = 0; i < m.rows; i++) {
+        for (var j = 0; j < m.cols; j++) {
+          (function(ii, jj) {
+            var input = document.createElement("input");
+            input.className = "cell";
+            input.value = m.data[ii][jj];
+            input.setAttribute("inputmode", "decimal");
+            input.addEventListener("input", function(e) { m.data[ii][jj] = e.target.value; });
+            input.addEventListener("focus", function() { input.select(); });
+            grid.appendChild(input);
+          })(i, j);
+        }
+      }
+      document.getElementById(name + "-rows").textContent = m.rows;
+      document.getElementById(name + "-cols").textContent = m.cols;
+    }
+
+    function changeSize(mat, dim, dir) {
+      var m = state[mat];
+      var newVal = m[dim] + dir;
+      if (newVal < 1 || newVal > MAX) return;
+      var old = m.data.map(function(r) { return r.slice(); });
+      m[dim] = newVal;
+      m.data = emptyData(m.rows, m.cols);
+      for (var i = 0; i < Math.min(old.length, m.rows); i++)
+        for (var j = 0; j < Math.min(old[0].length, m.cols); j++)
+          m.data[i][j] = old[i][j];
+      renderMatrix(mat);
+    }
+
+    document.querySelectorAll(".size-btn").forEach(function(btn) {
+      btn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        changeSize(btn.dataset.mat, btn.dataset.dim, parseInt(btn.dataset.dir, 10));
+      });
+    });
+
+    var dropdown = document.getElementById("opDropdown");
+    var opToggle = document.getElementById("opToggle");
+    var opMenu = document.getElementById("opMenu");
+    var scalarWrap = document.getElementById("scalarWrap");
+
+    opToggle.addEventListener("click", function(e) {
+      e.stopPropagation();
+      dropdown.classList.toggle("open");
+    });
+
+    opMenu.querySelectorAll(".dropdown-item").forEach(function(item) {
+      item.addEventListener("click", function(e) {
+        e.stopPropagation();
+        opMenu.querySelectorAll(".dropdown-item").forEach(function(x) { x.classList.remove("active"); });
+        item.classList.add("active");
+        currentOp = item.dataset.value;
+        opToggle.textContent = item.textContent;
+        scalarWrap.classList.toggle("visible", currentOp === "scalar" || currentOp === "scalarB");
+        dropdown.classList.remove("open");
+      });
+    });
+
+    document.addEventListener("click", function() { dropdown.classList.remove("open"); });
+
+    function parseVal(s) {
+      s = String(s).trim();
+      if (!s || s === "-") return 0;
+      if (s.indexOf("/") !== -1) {
+        var parts = s.split("/");
+        var a = Number(parts[0]), b = Number(parts[1]);
+        if (!isNaN(a) && !isNaN(b) && b !== 0) return a / b;
+      }
+      var n = Number(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function getMatrix(name) {
+      return state[name].data.map(function(row) { return row.map(parseVal); });
+    }
+
+    function formatNum(n) {
+      if (Number.isInteger(n)) return String(n);
+      var tol = 1e-9;
+      for (var den = 1; den <= 64; den++) {
+        var num = Math.round(n * den);
+        if (Math.abs(n - num / den) < tol) {
+          return den === 1 ? String(num) : (num + "/" + den);
+        }
+      }
+      return n.toFixed(4).replace(/\.?0+$/, "");
+    }
+
+    function renderPrettyMatrix(M) {
+      var cols = M[0].length;
+      var html = '<div class="pretty-matrix">';
+      html += '<div class="matrix-bracket left"></div>';
+      html += '<div class="matrix-table" style="grid-template-columns: repeat(' + cols + ', auto)">';
+      for (var i = 0; i < M.length; i++) {
+        for (var j = 0; j < M[i].length; j++) {
+          html += '<div class="mcell">' + formatNum(M[i][j]) + '</div>';
+        }
+      }
+      html += '</div>';
+      html += '<div class="matrix-bracket right"></div>';
+      html += '</div>';
+      return html;
+    }
+
+    function compute() {
+      var A = getMatrix("A");
+      var B = getMatrix("B");
+      var steps = [];
+      var result = null;
+
+      try {
+        if (currentOp === "add" || currentOp === "sub") {
+          if (A.length !== B.length || A[0].length !== B[0].length)
+            throw new Error("Размеры матриц A и B должны совпадать");
+          var sign = currentOp === "add" ? "+" : "−";
+          steps.push(currentOp === "add" ? "Сложение A + B" : "Вычитание A − B", "");
+          steps.push("Правило: cᵢⱼ = aᵢⱼ " + sign + " bᵢⱼ", "");
+          result = A.map(function(row, i) {
+            return row.map(function(v, j) {
+              return currentOp === "add" ? v + B[i][j] : v - B[i][j];
+            });
+          });
+          steps.push("Вычисление по элементам:");
+          for (var i = 0; i < A.length; i++)
+            for (var j = 0; j < A[0].length; j++)
+              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + formatNum(A[i][j]) + " " + sign + " " + formatNum(B[i][j]) + " = " + formatNum(result[i][j]));
+        } else if (currentOp === "mul") {
+          if (A[0].length !== B.length)
+            throw new Error("Нельзя умножить: столбцы A (" + A[0].length + ") ≠ строки B (" + B.length + ")");
+          steps.push("Умножение A × B", "");
+          steps.push("A: " + A.length + "×" + A[0].length + ",  B: " + B.length + "×" + B[0].length);
+          steps.push("Результат: " + A.length + "×" + B[0].length, "");
+          steps.push("Правило: cᵢⱼ = Σ aᵢₖ · bₖⱼ", "");
+          result = Array.from({ length: A.length }, function() { return Array(B[0].length).fill(0); });
+          for (var i = 0; i < A.length; i++) {
+            for (var j = 0; j < B[0].length; j++) {
+              var sum = 0, terms = [];
+              for (var k = 0; k < A[0].length; k++) {
+                sum += A[i][k] * B[k][j];
+                terms.push(formatNum(A[i][k]) + "·" + formatNum(B[k][j]));
+              }
+              result[i][j] = sum;
+              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + terms.join(" + ") + " = " + formatNum(sum));
+            }
+          }
+        } else if (currentOp === "scalar" || currentOp === "scalarB") {
+          var k = parseVal(document.getElementById("scalar").value);
+          var src = currentOp === "scalar" ? A : B;
+          var srcName = currentOp === "scalar" ? "A" : "B";
+          steps.push("Умножение на число: " + formatNum(k) + " × " + srcName, "");
+          steps.push("Правило: каждый элемент умножается на k", "");
+          result = src.map(function(row) { return row.map(function(v) { return v * k; }); });
+          for (var i = 0; i < src.length; i++)
+            for (var j = 0; j < src[0].length; j++)
+              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + formatNum(k) + " · " + formatNum(src[i][j]) + " = " + formatNum(result[i][j]));
+        }
+
+        var stepsHtml = '<div class="steps">' + steps.join("\n") + "</div>";
+        var matrixHtml = '<div style="margin-top:8px;color:var(--text-muted);font-size:0.9rem;margin-bottom:6px">Результат:</div>' + renderPrettyMatrix(result);
+        document.getElementById("result").innerHTML = stepsHtml + matrixHtml;
+      } catch (err) {
+        document.getElementById("result").innerHTML = '<div class="steps">Ошибка: ' + err.message + "</div>";
+      }
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", compute);
+
+    document.querySelectorAll(".swatch").forEach(function(s) {
+      s.addEventListener("click", function() {
+        document.querySelectorAll(".swatch").forEach(function(x) { x.classList.remove("active"); });
+        s.classList.add("active");
+        document.body.className = "theme-" + s.dataset.theme;
+      });
+    });
+
+    document.getElementById("app").addEventListener("mousedown", function(e) {
+      if (e.target.closest(".cell") || e.target.closest(".dropdown") || e.target.closest("button") || e.target.closest("input")) return;
+      if (document.activeElement && document.activeElement.classList.contains("cell")) {
+        document.activeElement.blur();
+      }
+    });
+
+    document.getElementById("helpBtn").addEventListener("click", function(e) {
+      e.stopPropagation();
+      document.getElementById("helpPanel").classList.toggle("open");
+    });
+
+    renderMatrix("A");
+    renderMatrix("B");
+  </script>
+</body>
+</html>
