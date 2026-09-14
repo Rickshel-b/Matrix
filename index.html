@@ -398,15 +398,98 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       max-width: 100%;
+      text-align: left;
     }
     .result-content .steps {
       white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: anywhere;
-      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
-      font-size: 0.88rem;
-      margin-bottom: 16px;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      font-size: 0.92rem;
+      margin-bottom: 8px;
       color: var(--text);
+      line-height: 1.7;
+      text-align: left;
+    }
+    .result-content .steps .katex {
+      font-size: 1.06em;
+    }
+    /* Hide KaTeX MathML / assistive UI (browser arrows on the right) */
+    .result-content .katex-mathml,
+    .result-content .katex .katex-mathml {
+      display: none !important;
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+    }
+    .result-content math {
+      display: none !important;
+    }
+    .result-content .katex-html {
+      display: inline-block;
+    }
+    .result-content .katex-display > .katex > .katex-html {
+      display: block;
+    }
+    /* All math left-aligned, slight indent for formulas */
+    .result-content .steps .katex-display {
+      display: block;
+      text-align: left;
+      margin: 0.45em 0 0.45em 0.25rem;
+      max-width: none;
+      overflow: visible;
+    }
+    .result-content .steps .katex-display > .katex {
+      text-align: left;
+      overflow: visible;
+    }
+
+    /* The result container itself handles horizontal scrolling.
+       Do not create a separate scrollbar for every KaTeX formula. */
+    .result-content .katex-display,
+    .result-content .katex {
+      overflow: visible !important;
+    }
+    .result-content .math-block {
+      margin: 12px 0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--glass-strong);
+      border: 1px solid var(--border);
+      overflow: visible;
+      text-align: left;
+      max-width: 100%;
+      display: inline-block;
+      min-width: min(100%, 280px);
+    }
+    .result-content .math-block .katex-display {
+      margin: 0;
+      text-align: left;
+    }
+    .result-content .answer-line {
+      margin-top: 12px;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .result-footer {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      text-align: left;
+    }
+    .result-footer .result-label {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+      text-align: left;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .result-footer .pretty-matrix {
+      margin-left: 0;
+      margin-right: 0;
     }
 
     /* Pretty matrix result */
@@ -469,9 +552,9 @@
       padding: 3px 0;
     }
     .matrix-table .mcell {
-      min-width: 44px;
-      min-height: 40px;
-      padding: 7px 8px;
+      min-width: 48px;
+      min-height: 44px;
+      padding: 8px 10px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -687,6 +770,9 @@
       .theme-panel { margin-top: 10px; padding: 10px; }
     }
   </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+    onload="window.__katexReady=true"></script>
 </head>
 <body class="theme-blue">
   <div class="app" id="app">
@@ -706,11 +792,14 @@
         <li><b>A × B</b> — умножение матриц (столбцы A = строки B)</li>
         <li><b>k × A</b> — умножение матрицы A на число</li>
         <li><b>k × B</b> — умножение матрицы B на число</li>
+        <li><b>det(A) / det(B)</b> — определитель матрицы</li>
+        <li><b>A⁻¹ / B⁻¹</b> — обратная матрица (через алгебраические дополнения)</li>
+        <li><b>Крамер</b> — решение СЛАУ A·x = b, где b — столбец матрицы B</li>
       </ul>
       <p>
         Максимальный размер матрицы — 5×5.<br>
         Можно вводить целые числа и дроби (например <code>1/3</code>).<br>
-        После вычисления показывается пошаговое решение и результат в виде матрицы.
+        После вычисления показывается пошаговое решение и результат.
       </p>
     </div>
 
@@ -766,6 +855,11 @@
           <div class="dropdown-item" data-value="mul">A × B</div>
           <div class="dropdown-item" data-value="scalar">k × A</div>
           <div class="dropdown-item" data-value="scalarB">k × B</div>
+          <div class="dropdown-item" data-value="detA">det(A)</div>
+          <div class="dropdown-item" data-value="detB">det(B)</div>
+          <div class="dropdown-item" data-value="invA">A⁻¹</div>
+          <div class="dropdown-item" data-value="invB">B⁻¹</div>
+          <div class="dropdown-item" data-value="cramer">Крамер (A·x = b)</div>
         </div>
       </div>
       <div class="scalar-wrap" id="scalarWrap">
@@ -892,12 +986,18 @@
     }
 
     function formatNum(n) {
+      if (typeof n !== "number" || !isFinite(n)) return String(n);
+      if (Math.abs(n) < 1e-12) return "0";
       if (Number.isInteger(n)) return String(n);
       var tol = 1e-9;
-      for (var den = 1; den <= 64; den++) {
+      for (var den = 1; den <= 128; den++) {
         var num = Math.round(n * den);
         if (Math.abs(n - num / den) < tol) {
-          return den === 1 ? String(num) : (num + "/" + den);
+          var a = Math.abs(num), b = den, t;
+          while (b) { t = a % b; a = b; b = t; }
+          num = num / a; den = den / a;
+          if (den === 1) return String(num);
+          return num + "/" + den;
         }
       }
       return n.toFixed(4).replace(/\.?0+$/, "");
@@ -910,13 +1010,364 @@
       html += '<div class="matrix-table" style="grid-template-columns: repeat(' + cols + ', auto)">';
       for (var i = 0; i < M.length; i++) {
         for (var j = 0; j < M[i].length; j++) {
-          html += '<div class="mcell">' + formatNum(M[i][j]) + '</div>';
+          html += '<div class="mcell">\\(' + toLatexNum(M[i][j]) + '\\)</div>';
         }
       }
       html += '</div>';
       html += '<div class="matrix-bracket right"></div>';
       html += '</div>';
       return html;
+    }
+
+
+
+    function minorMatrix(M, row, col) {
+      return M.filter(function(_, i) { return i !== row; }).map(function(r) {
+        return r.filter(function(_, j) { return j !== col; });
+      });
+    }
+
+    function matLine(M) {
+      return M.map(function(row) {
+        return "[ " + row.map(formatNum).join("  ") + " ]";
+      }).join("\n");
+    }
+
+    // School-style determinant
+    function determinant(M, steps, label) {
+      var n = M.length;
+      if (n !== M[0].length) throw new Error("Определитель считают только для квадратной матрицы");
+      label = label || "A";
+
+      if (n === 1) {
+        if (steps) {
+          steps.push("Матрица " + label + " состоит из одного элемента.");
+          steps.push("\\[ \\det(" + label + ") = " + toLatexNum(M[0][0]) + " \\]");
+        }
+        return M[0][0];
+      }
+
+      if (n === 2) {
+        var a = M[0][0], b = M[0][1], c = M[1][0], d = M[1][1];
+        var det = a * d - b * c;
+        if (steps) {
+          steps.push("Матрица " + label + ":");
+          steps.push("\\[ " + matrixLatex(M) + " \\]");
+          steps.push("");
+          steps.push("Для матрицы 2×2 используем формулу:");
+          steps.push("\\[ \\det = a_{11} a_{22} - a_{12} a_{21} \\]");
+          steps.push("");
+          steps.push("\\[ \\det(" + label + ") = " + toLatexNum(a) + " \\cdot " + toLatexNum(d) + " - " + toLatexNum(b) + " \\cdot " + toLatexNum(c) + " = " + toLatexNum(det) + " \\]");
+        }
+        return det;
+      }
+
+      if (n === 3) {
+        // Sarrus / triangle rule — as taught in school
+        var a11 = M[0][0], a12 = M[0][1], a13 = M[0][2];
+        var a21 = M[1][0], a22 = M[1][1], a23 = M[1][2];
+        var a31 = M[2][0], a32 = M[2][1], a33 = M[2][2];
+        var p1 = a11 * a22 * a33;
+        var p2 = a12 * a23 * a31;
+        var p3 = a13 * a21 * a32;
+        var m1 = a13 * a22 * a31;
+        var m2 = a11 * a23 * a32;
+        var m3 = a12 * a21 * a33;
+        var det = p1 + p2 + p3 - m1 - m2 - m3;
+        if (steps) {
+          steps.push("Матрица " + label + ":");
+          steps.push("\\[ " + matrixLatex(M) + " \\]");
+          steps.push("");
+          steps.push("Для матрицы 3×3 — правило треугольников (Саррюса):");
+          steps.push("\\[ \\det = a_{11}a_{22}a_{33}+a_{12}a_{23}a_{31}+a_{13}a_{21}a_{32} - a_{13}a_{22}a_{31}-a_{11}a_{23}a_{32}-a_{12}a_{21}a_{33} \\]");
+          steps.push("");
+          steps.push("Произведения главной диагонали и параллельных ей:");
+          steps.push("\\[ " + toLatexNum(a11) + "\\cdot" + toLatexNum(a22) + "\\cdot" + toLatexNum(a33) + " = " + toLatexNum(p1) + " \\]");
+          steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(p2) + " \\]");
+          steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(p3) + " \\]");
+          steps.push("");
+          steps.push("Произведения побочной диагонали и параллельных ей (со знаком «−»):");
+          steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a22) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(m1) + " \\]");
+          steps.push("\\[ " + toLatexNum(a11) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(m2) + " \\]");
+          steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a33) + " = " + toLatexNum(m3) + " \\]");
+          steps.push("");
+          steps.push("\\[ \\det(" + label + ") = (" + toLatexNum(p1) + ")+(" + toLatexNum(p2) + ")+(" + toLatexNum(p3) + ") - (" + toLatexNum(m1) + ")-(" + toLatexNum(m2) + ")-(" + toLatexNum(m3) + ") = " + toLatexNum(det) + " \\]");
+        }
+        return det;
+      }
+
+      // n >= 4: expansion by first row, school wording
+      var det = 0;
+      if (steps) {
+        steps.push("Матрица " + label + ":");
+        steps.push(matLine(M));
+        steps.push("");
+        steps.push("Разложим определитель по 1-й строке:");
+        steps.push("\\[ \\det = \\sum_j a_{1j} \\cdot A_{1j}, \\quad A_{1j} = (-1)^{1+j} M_{1j} \\]");
+        steps.push("");
+      }
+      for (var j = 0; j < n; j++) {
+        var sign = (j % 2 === 0) ? 1 : -1;
+        var m = minorMatrix(M, 0, j);
+        var minorDet = determinant(m, null, null);
+        var cof = sign * minorDet;
+        var term = M[0][j] * cof;
+        det += term;
+        if (steps) {
+          steps.push("Элемент \\( a_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\):");
+          steps.push("Минор \\( M_{1" + (j+1) + "} \\) (вычеркнули 1-ю строку и " + (j+1) + "-й столбец):");
+          steps.push("\\[ " + matrixLatex(m) + " \\]");
+          steps.push("\\[ \\det(M_{1" + (j+1) + "}) = " + toLatexNum(minorDet) + " \\]");
+          steps.push("\\[ A_{1" + (j+1) + "} = (-1)^{1+" + (j+1) + "} \\cdot " + toLatexNum(minorDet) + " = " + toLatexNum(cof) + " \\]");
+          steps.push("\\[ a_{1" + (j+1) + "} \\cdot A_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\cdot " + toLatexNum(cof) + " = " + toLatexNum(term) + " \\]");
+          steps.push("");
+        }
+      }
+      if (steps) {
+        steps.push("Складываем все вклады:");
+        steps.push("\\[ \\det(" + label + ") = " + toLatexNum(det) + " \\]");
+      }
+      return det;
+    }
+
+    function cofactorMatrix(M, steps) {
+      var n = M.length;
+      var C = Array.from({ length: n }, function() { return Array(n).fill(0); });
+      if (steps) {
+        steps.push("Шаг 2. Находим алгебраические дополнения:");
+      steps.push("\\[ A_{ij} = (-1)^{i+j} M_{ij} \\]");
+        steps.push("");
+      }
+      for (var i = 0; i < n; i++) {
+        for (var j = 0; j < n; j++) {
+          var sign = ((i + j) % 2 === 0) ? 1 : -1;
+          var m = minorMatrix(M, i, j);
+          var md;
+          if (n === 2) {
+            md = m[0][0];
+          } else {
+            md = determinant(m, null, null);
+          }
+          C[i][j] = sign * md;
+          if (steps) {
+            steps.push("\\[ A_{" + (i+1) + (j+1) + "} = (-1)^{" + (i+1) + "+" + (j+1) + "} M_{" + (i+1) + (j+1) + "} \\]");
+            if (n === 2) {
+              steps.push("\\[ M_{" + (i+1) + (j+1) + "} = " + toLatexNum(md) + " \\]");
+            } else {
+              steps.push("Минор \\( M_{" + (i+1) + (j+1) + "} \\):");
+              steps.push("\\[ " + matrixLatex(m) + " \\]");
+              steps.push("\\[ \\det(M_{" + (i+1) + (j+1) + "}) = " + toLatexNum(md) + " \\]");
+            }
+            steps.push("\\[ A_{" + (i+1) + (j+1) + "} = " + toLatexNum(sign) + " \\cdot " + toLatexNum(md) + " = " + toLatexNum(C[i][j]) + " \\]");
+            steps.push("");
+          }
+        }
+      }
+      return C;
+    }
+
+    function transpose(M) {
+      var rows = M.length, cols = M[0].length;
+      var T = Array.from({ length: cols }, function() { return Array(rows).fill(0); });
+      for (var i = 0; i < rows; i++)
+        for (var j = 0; j < cols; j++)
+          T[j][i] = M[i][j];
+      return T;
+    }
+
+    function inverseMatrix(M, steps, name) {
+      name = name || "A";
+      var n = M.length;
+      if (n !== M[0].length) throw new Error("Обратную матрицу ищут только для квадратной матрицы");
+
+      steps.push("Нахождение обратной матрицы " + name + "⁻¹");
+      steps.push("");
+      steps.push("Матрица " + name + ":");
+      steps.push("\\[ " + matrixLatex(M) + " \\]");
+      steps.push("");
+      steps.push("План решения (как в учебнике):");
+      steps.push("1) Найти det(" + name + ")");
+      steps.push("2) Найти алгебраические дополнения \\( A_{ij} \\");
+      steps.push("3) Составить союзную матрицу \\( " + name + "^{*} = (A_{ij})^{T} \\");
+      steps.push("4) \\( " + name + "^{-1} = \\dfrac{1}{\\det(" + name + ")} " + name + "^{*} \\)");
+      steps.push("");
+
+      steps.push("Шаг 1. Вычисляем определитель");
+      steps.push("");
+      var det = determinant(M, steps, name);
+      steps.push("");
+
+      if (Math.abs(det) < 1e-12) {
+        throw new Error("det(" + name + ") = 0 — обратной матрицы не существует");
+      }
+      steps.push("det(" + name + ") ≠ 0, значит обратная матрица существует.");
+      steps.push("");
+
+      // Special compact 2x2 school formula
+      if (n === 2) {
+        var a = M[0][0], b = M[0][1], c = M[1][0], d = M[1][1];
+        steps.push("Для матрицы 2×2 можно сразу записать:");
+        steps.push("\\[ " + name + "^{-1} = \\frac{1}{\\det} \\begin{pmatrix} a_{22} & -a_{12} \\\\ -a_{21} & a_{11} \\end{pmatrix} \\]");
+        steps.push("");
+        steps.push("\\[ " + name + "^{-1} = \\frac{1}{" + toLatexNum(det) + "} \\begin{pmatrix} " + toLatexNum(d) + " & " + toLatexNum(-b) + " \\\\ " + toLatexNum(-c) + " & " + toLatexNum(a) + " \\end{pmatrix} \\]");
+        steps.push("");
+        var inv2 = [
+          [d / det, -b / det],
+          [-c / det, a / det]
+        ];
+        steps.push("Итого:");
+        steps.push("\\[ " + name + "^{-1} = \\begin{pmatrix} " + toLatexNum(inv2[0][0]) + " & " + toLatexNum(inv2[0][1]) + " \\\\ " + toLatexNum(inv2[1][0]) + " & " + toLatexNum(inv2[1][1]) + " \\end{pmatrix} \\]");
+        return inv2;
+      }
+
+      var C = cofactorMatrix(M, steps);
+      steps.push("Матрица алгебраических дополнений \\((A_{ij})\\):");
+      steps.push("\\[ " + matrixLatex(C) + " \\]");
+      steps.push("");
+
+      var adj = transpose(C);
+      steps.push("Шаг 3. Союзная матрица \\(" + name + "^{*}\\) — транспонированная матрица алгебраических дополнений:");
+      steps.push("\\[ " + matrixLatex(adj) + " \\]");
+      steps.push("");
+
+      steps.push("Шаг 4. Умножаем союзную матрицу на \\( \\dfrac{1}{\\det(" + name + ")} = \\dfrac{1}{" + toLatexNum(det) + "} \\):");
+      steps.push("");
+      var inv = adj.map(function(row) {
+        return row.map(function(v) { return v / det; });
+      });
+      for (var i = 0; i < n; i++) {
+        for (var j = 0; j < n; j++) {
+          steps.push("\\[ (" + name + "^{-1})_{" + (i+1) + (j+1) + "} = \\frac{" + toLatexNum(adj[i][j]) + "}{" + toLatexNum(det) + "} = " + toLatexNum(inv[i][j]) + " \\]");
+        }
+      }
+      return inv;
+    }
+
+    function cramerSolve(A, b, steps) {
+      var n = A.length;
+      if (A[0].length !== n) throw new Error("Матрица коэффициентов A должна быть квадратной");
+      if (b.length !== n) throw new Error("Число свободных членов должно равняться порядку системы (" + n + ")");
+
+      steps.push("Решение системы методом Крамера");
+      steps.push("");
+      steps.push("Система A · x = b, где");
+      steps.push("");
+      steps.push("Матрица коэффициентов A:");
+      steps.push("\\[ " + matrixLatex(A) + " \\]");
+      steps.push("");
+      steps.push("Столбец свободных членов b:");
+      steps.push("\\[ b = " + matrixLatex(b.map(function(v) { return [v]; })) + " \\]");
+      steps.push("");
+      steps.push("По методу Крамера:");
+      steps.push("\\[ x_i = \\frac{\\Delta_i}{\\Delta} \\]");
+      steps.push("где \\(\\Delta = \\det(A)\\), а \\(\\Delta_i\\) — определитель матрицы,");
+      steps.push("полученной заменой i-го столбца матрицы A на столбец b.");
+      steps.push("");
+
+      steps.push("——— Главный определитель Δ ———");
+      steps.push("");
+      var detA = determinant(A, steps, "A");
+      steps.push("");
+      if (Math.abs(detA) < 1e-12) {
+        throw new Error("Δ = det(A) = 0 — метод Крамера не применим (нет единственного решения)");
+      }
+      steps.push("Δ ≠ 0, система имеет единственное решение.");
+      steps.push("");
+
+      var x = [];
+      for (var i = 0; i < n; i++) {
+        var Ai = A.map(function(row) { return row.slice(); });
+        for (var r = 0; r < n; r++) Ai[r][i] = b[r];
+
+        steps.push("——— Определитель Δ" + (i+1) + " (заменён " + (i+1) + "-й столбец) ———");
+        steps.push("");
+        steps.push("Матрица A" + (i+1) + ":");
+        steps.push("\\[ " + matrixLatex(Ai) + " \\]");
+        steps.push("");
+        var detAi = determinant(Ai, steps, "A" + (i+1));
+        x.push(detAi / detA);
+        steps.push("");
+        steps.push("\\[ x_{" + (i+1) + "} = \\frac{\\Delta_{" + (i+1) + "}}{\\Delta} = \\frac{" + toLatexNum(detAi) + "}{" + toLatexNum(detA) + "} = " + toLatexNum(x[i]) + " \\]");
+        steps.push("");
+      }
+
+      steps.push("Ответ:");
+      steps.push("\\[ " + x.map(function(v, k) { return "x_{" + (k+1) + "} = " + toLatexNum(v); }).join("\\,,\\; ") + " \\]");
+      return x.map(function(v) { return [v]; });
+    }
+
+
+    function toLatexNum(n) {
+      if (typeof n !== "number" || !isFinite(n)) return String(n);
+      if (Math.abs(n) < 1e-12) n = 0;
+      if (Number.isInteger(n)) return String(n);
+      var tol = 1e-9;
+      for (var den = 1; den <= 128; den++) {
+        var num = Math.round(n * den);
+        if (Math.abs(n - num / den) < tol) {
+          var a = Math.abs(num), b = den, t;
+          while (b) { t = a % b; a = b; b = t; }
+          num = num / a;
+          den = den / a;
+          if (den === 1) return String(num);
+          if (num < 0) return "-\\frac{" + Math.abs(num) + "}{" + den + "}";
+          return "\\frac{" + num + "}{" + den + "}";
+        }
+      }
+      return n.toFixed(6).replace(/\.?0+$/, "");
+    }
+
+    function matrixLatex(M) {
+      var rows = M.map(function(row) {
+        return row.map(toLatexNum).join(" & ");
+      }).join(" \\\\ ");
+      return "\\begin{pmatrix} " + rows + " \\end{pmatrix}";
+    }
+
+    function renderMathInResult() {
+      var el = document.getElementById("result");
+      if (!el) return;
+
+      function renderAll() {
+        if (!window.katex) {
+          setTimeout(renderAll, 150);
+          return;
+        }
+
+        // Replace display math \[ ... \]
+        var htmlStr = el.innerHTML;
+        htmlStr = htmlStr.replace(/\\\[([\s\S]*?)\\\]/g, function(_, tex) {
+          try {
+            return katex.renderToString(tex.trim(), {
+              displayMode: true,
+              throwOnError: false,
+              output: "html"
+            });
+          } catch (e) {
+            return tex;
+          }
+        });
+        // Replace inline math \( ... \)
+        htmlStr = htmlStr.replace(/\\\(([\s\S]*?)\\\)/g, function(_, tex) {
+          try {
+            return katex.renderToString(tex.trim(), {
+              displayMode: false,
+              throwOnError: false,
+              output: "html"
+            });
+          } catch (e) {
+            return tex;
+          }
+        });
+        el.innerHTML = htmlStr;
+
+        // Extra safety: strip any MathML nodes browsers might still inject
+        el.querySelectorAll("math, .katex-mathml, annotation, annotation-xml").forEach(function(n) {
+          n.remove();
+        });
+      }
+
+      renderAll();
     }
 
     function compute() {
@@ -931,7 +1382,7 @@
             throw new Error("Размеры матриц A и B должны совпадать");
           var sign = currentOp === "add" ? "+" : "−";
           steps.push(currentOp === "add" ? "Сложение A + B" : "Вычитание A − B", "");
-          steps.push("Правило: cᵢⱼ = aᵢⱼ " + sign + " bᵢⱼ", "");
+          steps.push("Правило:"); steps.push("\\[ c_{ij} = a_{ij} " + (sign === "+" ? "+" : "-") + " b_{ij} \\]");
           result = A.map(function(row, i) {
             return row.map(function(v, j) {
               return currentOp === "add" ? v + B[i][j] : v - B[i][j];
@@ -940,24 +1391,24 @@
           steps.push("Вычисление по элементам:");
           for (var i = 0; i < A.length; i++)
             for (var j = 0; j < A[0].length; j++)
-              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + formatNum(A[i][j]) + " " + sign + " " + formatNum(B[i][j]) + " = " + formatNum(result[i][j]));
+              steps.push("\\[ c_{" + (i+1) + (j+1) + "} = " + toLatexNum(A[i][j]) + " " + (sign === "+" ? "+" : "-") + " " + toLatexNum(B[i][j]) + " = " + toLatexNum(result[i][j]) + " \\]");
         } else if (currentOp === "mul") {
           if (A[0].length !== B.length)
             throw new Error("Нельзя умножить: столбцы A (" + A[0].length + ") ≠ строки B (" + B.length + ")");
           steps.push("Умножение A × B", "");
           steps.push("A: " + A.length + "×" + A[0].length + ",  B: " + B.length + "×" + B[0].length);
           steps.push("Результат: " + A.length + "×" + B[0].length, "");
-          steps.push("Правило: cᵢⱼ = Σ aᵢₖ · bₖⱼ", "");
+          steps.push("Правило:"); steps.push("\\[ c_{ij} = \\sum_k a_{ik} \\cdot b_{kj} \\]");
           result = Array.from({ length: A.length }, function() { return Array(B[0].length).fill(0); });
           for (var i = 0; i < A.length; i++) {
             for (var j = 0; j < B[0].length; j++) {
               var sum = 0, terms = [];
               for (var k = 0; k < A[0].length; k++) {
                 sum += A[i][k] * B[k][j];
-                terms.push(formatNum(A[i][k]) + "·" + formatNum(B[k][j]));
+                terms.push(toLatexNum(A[i][k]) + " \\cdot " + toLatexNum(B[k][j]));
               }
               result[i][j] = sum;
-              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + terms.join(" + ") + " = " + formatNum(sum));
+              steps.push("\\[ c_{" + (i+1) + (j+1) + "} = " + terms.join(" + ") + " = " + toLatexNum(sum) + " \\]");
             }
           }
         } else if (currentOp === "scalar" || currentOp === "scalarB") {
@@ -965,16 +1416,49 @@
           var src = currentOp === "scalar" ? A : B;
           var srcName = currentOp === "scalar" ? "A" : "B";
           steps.push("Умножение на число: " + formatNum(k) + " × " + srcName, "");
-          steps.push("Правило: каждый элемент умножается на k", "");
+          steps.push("Правило:"); steps.push("\\[ c_{ij} = k \\cdot a_{ij} \\]");
           result = src.map(function(row) { return row.map(function(v) { return v * k; }); });
           for (var i = 0; i < src.length; i++)
             for (var j = 0; j < src[0].length; j++)
-              steps.push("  c[" + (i+1) + "," + (j+1) + "] = " + formatNum(k) + " · " + formatNum(src[i][j]) + " = " + formatNum(result[i][j]));
+              steps.push("\\[ c_{" + (i+1) + (j+1) + "} = " + toLatexNum(k) + " \\cdot " + toLatexNum(src[i][j]) + " = " + toLatexNum(result[i][j]) + " \\]");
+        } else if (currentOp === "detA" || currentOp === "detB") {
+          var Mdet = currentOp === "detA" ? A : B;
+          var dname = currentOp === "detA" ? "A" : "B";
+          steps.push("Определитель матрицы " + dname, "");
+          var dval = determinant(Mdet, steps, dname);
+          result = [[dval]];
+        } else if (currentOp === "invA" || currentOp === "invB") {
+          var Minv = currentOp === "invA" ? A : B;
+          var iname = currentOp === "invA" ? "A" : "B";
+          result = inverseMatrix(Minv, steps, iname);
+        } else if (currentOp === "cramer") {
+          // b = first column of B, or full B if it's n x 1
+          var bvec;
+          if (B[0].length === 1) {
+            bvec = B.map(function(row) { return row[0]; });
+          } else {
+            bvec = B.map(function(row) { return row[0]; });
+            steps.push("В качестве вектора b берётся первый столбец матрицы B.", "");
+          }
+          result = cramerSolve(A, bvec, steps);
         }
 
         var stepsHtml = '<div class="steps">' + steps.join("\n") + "</div>";
-        var matrixHtml = '<div style="margin-top:8px;color:var(--text-muted);font-size:0.9rem;margin-bottom:6px">Результат:</div>' + renderPrettyMatrix(result);
+        var matrixHtml = "";
+        if (currentOp === "detA" || currentOp === "detB") {
+          matrixHtml = '<div class="result-footer"><div class="result-label">Результат</div>'
+            + '<div class="math-block">\\[ \\det = ' + toLatexNum(result[0][0]) + ' \\]</div></div>';
+        } else if (currentOp === "cramer") {
+          matrixHtml = '<div class="result-footer"><div class="result-label">Ответ</div>'
+            + '<div class="math-block">\\[ '
+            + result.map(function(row, i) { return "x_{" + (i+1) + "} = " + toLatexNum(row[0]); }).join("\\quad ")
+            + ' \\]</div></div>';
+        } else {
+          matrixHtml = '<div class="result-footer"><div class="result-label">Результат</div>'
+            + renderPrettyMatrix(result) + '</div>';
+        }
         document.getElementById("result").innerHTML = stepsHtml + matrixHtml;
+        renderMathInResult();
       } catch (err) {
         document.getElementById("result").innerHTML = '<div class="steps">Ошибка: ' + err.message + "</div>";
       }
