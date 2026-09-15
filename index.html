@@ -513,6 +513,13 @@
       margin-bottom: 6px;
       max-width: 100%;
     }
+    .result-content .steps .pretty-matrix {
+      display: flex;
+      margin: 10px 0 12px 0;
+    }
+    .result-content .steps .pretty-matrix .mcell {
+      font-size: 0.95rem;
+    }
     .matrix-bracket {
       display: flex;
       flex-direction: column;
@@ -1031,6 +1038,15 @@
       return html;
     }
 
+    var prettyStore = [];
+    function resetPrettyStore() { prettyStore = []; }
+    function pushPretty(steps, M) {
+      var id = prettyStore.length;
+      // deep copy snapshot
+      prettyStore.push(M.map(function(row) { return row.slice(); }));
+      steps.push("%%PRETTY:" + id + "%%");
+    }
+
 
 
     function minorMatrix(M, row, col) {
@@ -1064,7 +1080,7 @@
         var det = a * d - b * c;
         if (steps) {
           steps.push("Матрица " + label + ":");
-          steps.push("\\[ " + matrixLatex(M) + " \\]");
+          pushPretty(steps, M);
           steps.push("");
           steps.push("Для матрицы 2×2 используем формулу:");
           steps.push("\\[ \\det = a_{11} a_{22} - a_{12} a_{21} \\]");
@@ -1088,9 +1104,9 @@
         var det = p1 + p2 + p3 - m1 - m2 - m3;
         if (steps) {
           steps.push("Матрица " + label + ":");
-          steps.push("\\[ " + matrixLatex(M) + " \\]");
+          pushPretty(steps, M);
           steps.push("");
-          steps.push("Для матрицы 3×3 — правило треугольников (Саррюса):");
+          steps.push("Для матрицы 3×3 — правило Саррюса:");
           steps.push("\\[ \\det = a_{11}a_{22}a_{33}+a_{12}a_{23}a_{31}+a_{13}a_{21}a_{32} - a_{13}a_{22}a_{31}-a_{11}a_{23}a_{32}-a_{12}a_{21}a_{33} \\]");
           steps.push("");
           steps.push("Произведения главной диагонали и параллельных ей:");
@@ -1098,7 +1114,7 @@
           steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(p2) + " \\]");
           steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(p3) + " \\]");
           steps.push("");
-          steps.push("Произведения побочной диагонали и параллельных ей (со знаком «−»):");
+          steps.push("Произведения побочной диагонали и параллельных ей, со знаком «−»:");
           steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a22) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(m1) + " \\]");
           steps.push("\\[ " + toLatexNum(a11) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(m2) + " \\]");
           steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a33) + " = " + toLatexNum(m3) + " \\]");
@@ -1128,7 +1144,7 @@
         if (steps) {
           steps.push("Элемент \\( a_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\):");
           steps.push("Минор \\( M_{1" + (j+1) + "} \\) (вычеркнули 1-ю строку и " + (j+1) + "-й столбец):");
-          steps.push("\\[ " + matrixLatex(m) + " \\]");
+          pushPretty(steps, m);
           steps.push("\\[ \\det(M_{1" + (j+1) + "}) = " + toLatexNum(minorDet) + " \\]");
           steps.push("\\[ A_{1" + (j+1) + "} = (-1)^{1+" + (j+1) + "} \\cdot " + toLatexNum(minorDet) + " = " + toLatexNum(cof) + " \\]");
           steps.push("\\[ a_{1" + (j+1) + "} \\cdot A_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\cdot " + toLatexNum(cof) + " = " + toLatexNum(term) + " \\]");
@@ -1167,7 +1183,7 @@
               steps.push("\\[ M_{" + (i+1) + (j+1) + "} = " + toLatexNum(md) + " \\]");
             } else {
               steps.push("Минор \\( M_{" + (i+1) + (j+1) + "} \\):");
-              steps.push("\\[ " + matrixLatex(m) + " \\]");
+              pushPretty(steps, m);
               steps.push("\\[ \\det(M_{" + (i+1) + (j+1) + "}) = " + toLatexNum(md) + " \\]");
             }
             steps.push("\\[ A_{" + (i+1) + (j+1) + "} = " + toLatexNum(sign) + " \\cdot " + toLatexNum(md) + " = " + toLatexNum(C[i][j]) + " \\]");
@@ -1195,9 +1211,9 @@
       steps.push("Нахождение обратной матрицы " + name + "⁻¹");
       steps.push("");
       steps.push("Матрица " + name + ":");
-      steps.push("\\[ " + matrixLatex(M) + " \\]");
+      pushPretty(steps, M);
       steps.push("");
-      steps.push("План решения (как в учебнике):");
+      steps.push("План решения:");
       steps.push("1) Найти det(" + name + ")");
       steps.push("2) Найти алгебраические дополнения \\( A_{ij} \\)");
       steps.push("3) Составить союзную матрицу \\( " + name + "^{*} = (A_{ij})^{T} \\)");
@@ -1234,12 +1250,12 @@
 
       var C = cofactorMatrix(M, steps);
       steps.push("Матрица алгебраических дополнений \\((A_{ij})\\):");
-      steps.push("\\[ " + matrixLatex(C) + " \\]");
+      pushPretty(steps, C);
       steps.push("");
 
       var adj = transpose(C);
       steps.push("Шаг 3. Союзная матрица \\(" + name + "^{*}\\) — транспонированная матрица алгебраических дополнений:");
-      steps.push("\\[ " + matrixLatex(adj) + " \\]");
+      pushPretty(steps, adj);
       steps.push("");
 
       steps.push("Шаг 4. Умножаем союзную матрицу на \\( \\dfrac{1}{\\det(" + name + ")} = \\dfrac{1}{" + toLatexNum(det) + "} \\):");
@@ -1265,10 +1281,10 @@
       steps.push("Система A · x = b, где");
       steps.push("");
       steps.push("Матрица коэффициентов A:");
-      steps.push("\\[ " + matrixLatex(A) + " \\]");
+      pushPretty(steps, A);
       steps.push("");
       steps.push("Столбец свободных членов b:");
-      steps.push("\\[ b = " + matrixLatex(b.map(function(v) { return [v]; })) + " \\]");
+      pushPretty(steps, b.map(function(v) { return [v]; }));
       steps.push("");
       steps.push("По методу Крамера:");
       steps.push("\\[ x_i = \\frac{\\Delta_i}{\\Delta} \\]");
@@ -1291,10 +1307,11 @@
         var Ai = A.map(function(row) { return row.slice(); });
         for (var r = 0; r < n; r++) Ai[r][i] = b[r];
 
-        steps.push("——— Определитель \\(\\Delta_{" + (i+1) + "}\\) (заменён " + (i+1) + "-й столбец) ———");
+        steps.push("——— Определитель \\(\\Delta_{" + (i+1) + "}\\) ———");
+        steps.push("Заменён " + (i+1) + "-й столбец на столбец свободных членов.");
         steps.push("");
         steps.push("Матрица \\(A_{" + (i+1) + "}\\):");
-        steps.push("\\[ " + matrixLatex(Ai) + " \\]");
+        pushPretty(steps, Ai);
         steps.push("");
         var detAi = determinant(Ai, steps, "A" + (i+1));
         x.push(detAi / detA);
@@ -1402,6 +1419,7 @@
     }
 
     function compute() {
+      resetPrettyStore();
       var A = getMatrix("A");
       var B = getMatrix("B");
       var steps = [];
@@ -1474,7 +1492,11 @@
           result = cramerSolve(A, bvec, steps);
         }
 
-        var stepsHtml = '<div class="steps">' + steps.map(escapeHtml).join("\n") + "</div>";
+        var stepsHtml = '<div class="steps">' + steps.map(function(s) {
+          var pm = /^%%PRETTY:(\d+)%%$/.exec(s);
+          if (pm) return renderPrettyMatrix(prettyStore[parseInt(pm[1], 10)]);
+          return escapeHtml(s);
+        }).join("\n") + "</div>";
         var matrixHtml = "";
         if (currentOp === "detA" || currentOp === "detB") {
           matrixHtml = '<div class="result-footer"><div class="result-label">Результат</div>'
