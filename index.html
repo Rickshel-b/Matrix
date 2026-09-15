@@ -1090,45 +1090,32 @@
           steps.push("Матрица " + label + ":");
           steps.push("\\[ " + matrixLatex(M) + " \\]");
           steps.push("");
-          steps.push("Для матрицы 3×3 — правило Саррюса (как в тетради):");
-          steps.push("Допишем справа первые два столбца:");
-          steps.push("\\[ \\begin{pmatrix} " +
-            toLatexNum(a11)+" & "+toLatexNum(a12)+" & "+toLatexNum(a13)+" &\\!\\!|\\!\\!& "+toLatexNum(a11)+" & "+toLatexNum(a12)+" \\\\ " +
-            toLatexNum(a21)+" & "+toLatexNum(a22)+" & "+toLatexNum(a23)+" &\\!\\!|\\!\\!& "+toLatexNum(a21)+" & "+toLatexNum(a22)+" \\\\ " +
-            toLatexNum(a31)+" & "+toLatexNum(a32)+" & "+toLatexNum(a33)+" &\\!\\!|\\!\\!& "+toLatexNum(a31)+" & "+toLatexNum(a32) +
-            " \\end{pmatrix} \\]");
+          steps.push("Для матрицы 3×3 — правило треугольников (Саррюса):");
+          steps.push("\\[ \\det = a_{11}a_{22}a_{33}+a_{12}a_{23}a_{31}+a_{13}a_{21}a_{32} - a_{13}a_{22}a_{31}-a_{11}a_{23}a_{32}-a_{12}a_{21}a_{33} \\]");
           steps.push("");
-          steps.push("Складываем произведения по диагоналям вниз (знак «+»):");
+          steps.push("Произведения главной диагонали и параллельных ей:");
           steps.push("\\[ " + toLatexNum(a11) + "\\cdot" + toLatexNum(a22) + "\\cdot" + toLatexNum(a33) + " = " + toLatexNum(p1) + " \\]");
           steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(p2) + " \\]");
           steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(p3) + " \\]");
           steps.push("");
-          steps.push("Вычитаем произведения по диагоналям вверх (знак «−»):");
+          steps.push("Произведения побочной диагонали и параллельных ей (со знаком «−»):");
           steps.push("\\[ " + toLatexNum(a13) + "\\cdot" + toLatexNum(a22) + "\\cdot" + toLatexNum(a31) + " = " + toLatexNum(m1) + " \\]");
           steps.push("\\[ " + toLatexNum(a11) + "\\cdot" + toLatexNum(a23) + "\\cdot" + toLatexNum(a32) + " = " + toLatexNum(m2) + " \\]");
           steps.push("\\[ " + toLatexNum(a12) + "\\cdot" + toLatexNum(a21) + "\\cdot" + toLatexNum(a33) + " = " + toLatexNum(m3) + " \\]");
           steps.push("");
-          steps.push("Итого:");
           steps.push("\\[ \\det(" + latexName(label) + ") = (" + toLatexNum(p1) + ")+(" + toLatexNum(p2) + ")+(" + toLatexNum(p3) + ") - (" + toLatexNum(m1) + ")-(" + toLatexNum(m2) + ")-(" + toLatexNum(m3) + ") = " + toLatexNum(det) + " \\]");
         }
         return det;
       }
 
-      // n >= 4: Laplace expansion by first row — notebook style
+      // n >= 4: expansion by first row, school wording
       var det = 0;
-      var termList = [];
       if (steps) {
         steps.push("Матрица " + label + ":");
-        steps.push("\\[ " + matrixLatex(M) + " \\]");
+        steps.push(matLine(M));
         steps.push("");
-        steps.push("Разложим определитель по первой строке (метод Лапласа):");
-        steps.push("");
-        var expParts = [];
-        for (var jj = 0; jj < n; jj++) {
-          expParts.push("a_{1" + (jj+1) + "} A_{1" + (jj+1) + "}");
-        }
-        steps.push("\\[ \\det(" + latexName(label) + ") = " + expParts.join(" + ") + " \\]");
-        steps.push("где \\( A_{1j} = (-1)^{1+j}\\, M_{1j} \\).");
+        steps.push("Разложим определитель по 1-й строке:");
+        steps.push("\\[ \\det = \\sum_j a_{1j} \\cdot A_{1j}, \\quad A_{1j} = (-1)^{1+j} M_{1j} \\]");
         steps.push("");
       }
       for (var j = 0; j < n; j++) {
@@ -1138,24 +1125,19 @@
         var cof = sign * minorDet;
         var term = M[0][j] * cof;
         det += term;
-        termList.push(term);
         if (steps) {
-          steps.push((j+1) + ") Элемент \\( a_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\)");
-          steps.push("Вычёркиваем 1-ю строку и " + (j+1) + "-й столбец — минор \\( M_{1" + (j+1) + "} \\):");
+          steps.push("Элемент \\( a_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\):");
+          steps.push("Минор \\( M_{1" + (j+1) + "} \\) (вычеркнули 1-ю строку и " + (j+1) + "-й столбец):");
           steps.push("\\[ " + matrixLatex(m) + " \\]");
-          steps.push("\\[ M_{1" + (j+1) + "} = " + toLatexNum(minorDet) + " \\]");
+          steps.push("\\[ \\det(M_{1" + (j+1) + "}) = " + toLatexNum(minorDet) + " \\]");
           steps.push("\\[ A_{1" + (j+1) + "} = (-1)^{1+" + (j+1) + "} \\cdot " + toLatexNum(minorDet) + " = " + toLatexNum(cof) + " \\]");
-          steps.push("\\[ a_{1" + (j+1) + "} A_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\cdot (" + toLatexNum(cof) + ") = " + toLatexNum(term) + " \\]");
+          steps.push("\\[ a_{1" + (j+1) + "} \\cdot A_{1" + (j+1) + "} = " + toLatexNum(M[0][j]) + " \\cdot " + toLatexNum(cof) + " = " + toLatexNum(term) + " \\]");
           steps.push("");
         }
       }
       if (steps) {
-        var sumTex = termList.map(function(t, idx) {
-          if (idx === 0) return toLatexNum(t);
-          return (t < 0 ? " - " + toLatexNum(Math.abs(t)) : " + " + toLatexNum(t));
-        }).join("");
-        steps.push("Складываем полученные произведения:");
-        steps.push("\\[ \\det(" + latexName(label) + ") = " + sumTex + " = " + toLatexNum(det) + " \\]");
+        steps.push("Складываем все вклады:");
+        steps.push("\\[ \\det(" + latexName(label) + ") = " + toLatexNum(det) + " \\]");
       }
       return det;
     }
@@ -1219,7 +1201,7 @@
       steps.push("1) Найти det(" + name + ")");
       steps.push("2) Найти алгебраические дополнения \\( A_{ij} \\)");
       steps.push("3) Составить союзную матрицу \\( " + name + "^{*} = (A_{ij})^{T} \\)");
-      steps.push("4) \\( " + name + "^{-1} = \\dfrac{1}{\\det(" + name + ")}\\, " + name + "^{*} \\)");
+      steps.push("4) \\( " + name + "^{-1} = \\dfrac{1}{\\det(" + name + ")} " + name + "^{*} \\)");
       steps.push("");
 
       steps.push("Шаг 1. Вычисляем определитель");
@@ -1278,89 +1260,51 @@
       if (A[0].length !== n) throw new Error("Матрица коэффициентов A должна быть квадратной");
       if (b.length !== n) throw new Error("Число свободных членов должно равняться порядку системы (" + n + ")");
 
-      var varNames = ["x", "y", "z", "u", "v"];
-      var deltaNames = ["\\Delta_x", "\\Delta_y", "\\Delta_z", "\\Delta_u", "\\Delta_v"];
-      function vName(i) {
-        return i < varNames.length ? varNames[i] : ("x_{" + (i+1) + "}");
-      }
-      function dName(i) {
-        return i < deltaNames.length ? deltaNames[i] : ("\\Delta_{" + (i+1) + "}");
-      }
-
       steps.push("Решение системы методом Крамера");
       steps.push("");
-      steps.push("1. Запишем систему уравнений:");
+      steps.push("Система A · x = b, где");
       steps.push("");
-      for (var r = 0; r < n; r++) {
-        var parts = [];
-        for (var c = 0; c < n; c++) {
-          var coef = A[r][c];
-          var vn = vName(c);
-          if (c === 0) {
-            parts.push(toLatexNum(coef) + vn);
-          } else {
-            parts.push((coef < 0 ? " - " : " + ") + toLatexNum(Math.abs(coef)) + vn);
-          }
-        }
-        steps.push("\\[ " + parts.join("") + " = " + toLatexNum(b[r]) + " \\]");
-      }
+      steps.push("Матрица коэффициентов A:");
+      steps.push("\\[ " + matrixLatex(A) + " \\]");
       steps.push("");
-      steps.push("Матрица коэффициентов:");
-      steps.push("\\[ A = " + matrixLatex(A) + " \\]");
+      steps.push("Столбец свободных членов b:");
+      steps.push("\\[ b = " + matrixLatex(b.map(function(v) { return [v]; })) + " \\]");
       steps.push("");
-      steps.push("Столбец свободных членов:");
-      steps.push("\\[ B = " + matrixLatex(b.map(function(v) { return [v]; })) + " \\]");
-      steps.push("");
-      steps.push("2. Формулы Крамера:");
-      if (n === 2) {
-        steps.push("\\[ x = \\frac{\\Delta_x}{\\Delta},\\qquad y = \\frac{\\Delta_y}{\\Delta} \\]");
-      } else if (n === 3) {
-        steps.push("\\[ x = \\frac{\\Delta_x}{\\Delta},\\qquad y = \\frac{\\Delta_y}{\\Delta},\\qquad z = \\frac{\\Delta_z}{\\Delta} \\]");
-      } else {
-        steps.push("\\[ " + Array.from({length: n}, function(_, i) {
-          return vName(i) + " = \\frac{" + dName(i) + "}{\\Delta}";
-        }).join(",\\quad ") + " \\]");
-      }
-      steps.push("");
-      steps.push("\\(\\Delta = \\det(A)\\) — главный определитель.");
-      steps.push("\\(\\Delta_x,\\Delta_y,\\ldots\\) — определители, где столбец при неизвестной заменён на столбец свободных членов.");
+      steps.push("По методу Крамера:");
+      steps.push("\\[ x_i = \\frac{\\Delta_i}{\\Delta} \\]");
+      steps.push("где \\(\\Delta = \\det(A)\\), а \\(\\Delta_i\\) — определитель матрицы,");
+      steps.push("полученной заменой i-го столбца матрицы A на столбец b.");
       steps.push("");
 
-      // Main determinant — avoid double "Матрица A" header from determinant()
-      steps.push("3. Главный определитель \\(\\Delta\\):");
+      steps.push("——— Главный определитель Δ ———");
       steps.push("");
       var detA = determinant(A, steps, "A");
       steps.push("");
-      steps.push("\\[ \\Delta = " + toLatexNum(detA) + " \\]");
-      steps.push("");
       if (Math.abs(detA) < 1e-12) {
-        throw new Error("Δ = 0 — метод Крамера не применим (нет единственного решения)");
+        throw new Error("Δ = det(A) = 0 — метод Крамера не применим (нет единственного решения)");
       }
-      steps.push("Так как \\(\\Delta \\neq 0\\), система имеет единственное решение.");
+      steps.push("Δ ≠ 0, система имеет единственное решение.");
       steps.push("");
 
       var x = [];
       for (var i = 0; i < n; i++) {
         var Ai = A.map(function(row) { return row.slice(); });
-        for (var r2 = 0; r2 < n; r2++) Ai[r2][i] = b[r2];
+        for (var r = 0; r < n; r++) Ai[r][i] = b[r];
 
-        steps.push((4 + i) + ". Определитель \\(" + dName(i) + "\\)");
-        steps.push("Заменяем столбец при \\(" + vName(i) + "\\) на столбец свободных членов:");
+        steps.push("——— Определитель \\(\\Delta_{" + (i+1) + "}\\) (заменён " + (i+1) + "-й столбец) ———");
+        steps.push("");
+        steps.push("Матрица \\(A_{" + (i+1) + "}\\):");
         steps.push("\\[ " + matrixLatex(Ai) + " \\]");
         steps.push("");
-        var detAi = determinant(Ai, steps, "A" + vName(i));
+        var detAi = determinant(Ai, steps, "A" + (i+1));
         x.push(detAi / detA);
         steps.push("");
-        steps.push("\\[ " + dName(i) + " = " + toLatexNum(detAi) + " \\]");
-        steps.push("");
-        steps.push("\\[ " + vName(i) + " = \\frac{" + dName(i) + "}{\\Delta} = \\frac{" + toLatexNum(detAi) + "}{" + toLatexNum(detA) + "} = " + toLatexNum(x[i]) + " \\]");
+        steps.push("\\[ x_{" + (i+1) + "} = \\frac{\\Delta_{" + (i+1) + "}}{\\Delta} = \\frac{" + toLatexNum(detAi) + "}{" + toLatexNum(detA) + "} = " + toLatexNum(x[i]) + " \\]");
         steps.push("");
       }
 
       steps.push("Ответ:");
-      steps.push("\\[ " + x.map(function(v, k) {
-        return vName(k) + " = " + toLatexNum(v);
-      }).join(",\\qquad ") + " \\]");
+      steps.push("\\[ " + x.map(function(v, k) { return "x_{" + (k+1) + "} = " + toLatexNum(v); }).join("\\,,\\; ") + " \\]");
       return x.map(function(v) { return [v]; });
     }
 
@@ -1536,13 +1480,9 @@
           matrixHtml = '<div class="result-footer"><div class="result-label">Результат</div>'
             + '<div class="math-block">\\[ \\det = ' + toLatexNum(result[0][0]) + ' \\]</div></div>';
         } else if (currentOp === "cramer") {
-          var _vn = ["x", "y", "z", "u", "v"];
           matrixHtml = '<div class="result-footer"><div class="result-label">Ответ</div>'
             + '<div class="math-block">\\[ '
-            + result.map(function(row, i) {
-                var nm = i < _vn.length ? _vn[i] : ("x_{" + (i+1) + "}");
-                return nm + " = " + toLatexNum(row[0]);
-              }).join(",\\quad ")
+            + result.map(function(row, i) { return "x_{" + (i+1) + "} = " + toLatexNum(row[0]); }).join("\\quad ")
             + ' \\]</div></div>';
         } else {
           matrixHtml = '<div class="result-footer"><div class="result-label">Результат</div>'
